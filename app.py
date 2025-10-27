@@ -5,7 +5,7 @@ import threading
 import subprocess
 from flask import Flask
 
-app = Flask(name)
+app = Flask(__name__)
 
 @app.route('/')
 def home():
@@ -19,7 +19,7 @@ def run_bot():
     """Запуск основного бота в отдельном процессе"""
     subprocess.run(["python", "bot.py"])
 
-if name == "main":
+if __name__ == "__main__":
     # Запускаем бота в отдельном потоке
     bot_thread = threading.Thread(target=run_bot)
     bot_thread.daemon = True
