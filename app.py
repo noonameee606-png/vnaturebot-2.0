@@ -1,28 +1,42 @@
-import os
-import subprocess
-import threading
 from flask import Flask
+import threading
+import requests
+import time
+import os
 
+# Создаём Flask-приложение
 app = Flask(__name__)
 
+# Главная страница (Render проверяет, что сервис жив)
 @app.route('/')
-def home():
-    return "🤖 VNATUREBOT is running!"
+def index():
+    return "VNATUREBOT is alive!"
 
-@app.route('/health')
-def health():
-    return "OK"
+# Путь для пинга с cron-job.org
+@app.route('/ping')
+def ping():
+    return "pong", 200
 
+# Функция для запуска Telegram-бота в отдельном потоке
 def run_bot():
-    """Запускаем основной файл бота"""
-    subprocess.run(["python", "bot.py"])
+    os.system("python bot.py")
 
-if __name__ == "__main__":
+# Функция для периодического пинга Render (дополнительно)
+def keep_alive():
+    while True:
+        try:
+            url = os.getenv("RENDER_URL", "https://vnaturebot-2-0.onrender.com")
+            requests.get(url)
+        except Exception as e:
+            print(f"Ping failed: {e}")
+        time.sleep(600)  # каждые 10 минут
+
+if __name__ == '__main__':
     # Запускаем бота в отдельном потоке
-    bot_thread = threading.Thread(target=run_bot)
-    bot_thread.daemon = True
-    bot_thread.start()
+    threading.Thread(target=run_bot).start()
 
-    # Flask сервер (для Render)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    # Запускаем фоновый пинг, чтобы Render не «засыпал»
+    threading.Thread(target=keep_alive).start()
+
+    # Запускаем Flask-сервер
+    app.run(host='0.0.0.0', port=10000)
